@@ -5,7 +5,7 @@
 **Project Name:** AI Course Selection Assistant
 **Type:** Full-stack web application with AI-powered course planning
 **Target University:** NYU (New York University)
-**Deployment Target:** Docker Compose locally; migration to Digital Ocean (cloud-hosted) planned
+**Deployment Target:** Docker Compose locally; production on DigitalOcean App Platform with MongoDB Atlas
 
 This application helps NYU students plan their semester by combining course catalog data, section-level scheduling, graduation requirements, professor ratings, and the student's academic history. A Gemini-powered AI agent interprets natural language requests, queries the database, and generates grounded course recommendations.
 
@@ -78,7 +78,7 @@ Each subsystem runs in an isolated `try/except` block — one failure does not a
 
 ## 3. Database
 
-**Provider:** Local MongoDB container in Docker Compose
+**Provider:** MongoDB Atlas (production); local MongoDB container in Docker Compose (development)
 **Config env vars:** `MONGO_URI`, `MONGO_DB_NAME`
 
 | Collection | Contents | Primary index |
@@ -178,14 +178,12 @@ Key test files:
 
 ## 9. DigitalOcean Deployment
 
-The application runs on a DigitalOcean Droplet via Docker Compose:
+The application runs on **DigitalOcean App Platform** (not a Droplet). Each service (`apis`, `frontend`, `scrapers`) is deployed as a separate App Platform component using its Docker Hub image. There is no `mongo` container in production — the database is **MongoDB Atlas**.
 
-- `mongo` runs locally on the Compose network with persistent data in the `mongo_data` named volume
-- MongoDB is bound to `127.0.0.1:${MONGO_PORT:-27017}` on the host for private import/export commands
-- `apis` and `scrapers` use `MONGO_URI=mongodb://mongo:27017/final_project`
-- `frontend` talks to the API on the internal Compose network
-- `FRONTEND_PUBLIC_URL` and Google OAuth redirect URIs must point to the public domain
-- `run_daily_scrape.py` runs as the long-lived scraper worker
+- `MONGO_URI` must be set to the Atlas connection string (e.g. `mongodb+srv://...`)
+- `FRONTEND_PUBLIC_URL` and Google OAuth redirect URIs must point to the App Platform domain
+- `run_daily_scrape.py` runs as the long-lived scraper worker component
+- `MONGO_IMAGE_TAG` and `MONGO_PORT` are local-development-only variables and are not needed in production
 
 ---
 
