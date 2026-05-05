@@ -37,9 +37,9 @@ This monorepo contains three custom Python subsystems plus MongoDB:
 | Frontend | `frontend/` | 3000 | Flask/Jinja web app, login flow, UI pages, and frontend API proxies |
 | API service | `apis/` | 8000 | Flask REST API for courses, users, transcripts, programs, professors, and AI chat |
 | Scraper worker | `scrapers/` | N/A | CLI and long-running scraper jobs for NYU Bulletin, Albert imports, and MongoDB loading |
-| Database | Docker service `mongo` | 27017 | MongoDB database with persistent Docker volume storage |
+| Database | MongoDB Atlas (production) / Docker service `mongo` (local) | 27017 | MongoDB database — Atlas in production, local Docker container for development |
 
-Docker Compose starts `frontend`, `apis`, `scrapers`, and `mongo`. The application services talk to MongoDB through `MONGO_URI=mongodb://mongo:27017/final_project`, and the host machine can access MongoDB privately at `127.0.0.1:${MONGO_PORT:-27017}`.
+Docker Compose starts `frontend`, `apis`, `scrapers`, and `mongo` for local development. Locally, services connect via `MONGO_URI=mongodb://mongo:27017/final_project`. In production, `MONGO_URI` points to a MongoDB Atlas cluster.
 
 ## Docker Images
 
@@ -59,7 +59,7 @@ The CI/CD pipelines build and publish each custom subsystem image to Docker Hub:
 |-- frontend/              # Flask web app, templates, static assets, and frontend tests
 |-- scrapers/              # Course/program scrapers and MongoDB loading tools
 |-- tests/                 # Root-level scraper tests
-|-- docker-compose.yml     # Local and droplet service orchestration
+|-- docker-compose.yml     # Local development service orchestration
 |-- .env.example           # Example local configuration
 `-- README.md
 ```
@@ -78,7 +78,7 @@ Then fill in the values that are specific to your machine and accounts.
 |---|---|---|---|
 | `MONGO_IMAGE_TAG` | `mongo` | No | MongoDB image tag, default `7` |
 | `MONGO_PORT` | `mongo` | No | Loopback-only host port for private import/export commands, default `27017` |
-| `MONGO_URI` | `apis`, `scrapers` | Yes | MongoDB connection string; Compose default is `mongodb://mongo:27017/final_project` |
+| `MONGO_URI` | `apis`, `scrapers` | Yes | MongoDB connection string; local default is `mongodb://mongo:27017/final_project`; production uses a MongoDB Atlas URI (`mongodb+srv://...`) |
 | `MONGO_DB_NAME` | `apis`, `scrapers` | Yes | MongoDB database name, usually `final_project` |
 | `API_INTERNAL_TOKEN` | `apis`, `frontend` | Yes | Shared secret used by the frontend for protected API calls |
 | `GEMINI_API_KEY` | `apis` | Yes | Google Gemini API key for AI chat and transcript fallback parsing |
@@ -259,16 +259,17 @@ Workflows run on pushes and pull requests to `main` and `master`. Docker images 
 
 ## DigitalOcean Deployment
 
-Production runs with Docker Compose on DigitalOcean. Compose starts `frontend`, `apis`, `scrapers`, and `mongo`, and stores MongoDB data in the persistent `mongo_data` volume.
+Production runs on **DigitalOcean App Platform**. Each service (`frontend`, `apis`, `scrapers`) is deployed as a separate App Platform component from its Docker Hub image. The database is **MongoDB Atlas** — there is no `mongo` container in production.
 
-Production `.env` should use the internal Compose MongoDB URI:
+Key production environment variables:
 
 ```bash
-MONGO_URI=mongodb://mongo:27017/final_project
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/final_project
 MONGO_DB_NAME=final_project
-MONGO_PORT=27017
 FRONTEND_PUBLIC_URL=https://squid-app-3b9ec.ondigitalocean.app
 ```
+
+`MONGO_IMAGE_TAG` and `MONGO_PORT` are local-development-only and are not needed in production.
 
 After deployment, verify:
 
@@ -277,8 +278,7 @@ After deployment, verify:
 - The frontend can reach the backend API.
 - `GET /health` returns a healthy response.
 - Course search returns results.
-- The scraper writes course and program data into MongoDB.
-- MongoDB data persists after containers are rebuilt or restarted.
+- The scraper writes course and program data into MongoDB Atlas.
 
 ## Development Notes
 
