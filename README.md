@@ -27,6 +27,7 @@ The production app is deployed here: https://squid-app-3b9ec.ondigitalocean.app/
 - [Minho Eune](https://github.com/minhoeune)
 - [Jaiden Xu](https://github.com/jbx202)
 - [Kyle Chen](https://github.com/KyleC55)
+- [Alejandro Fiestas](https://github.com/avf8449)
 
 ## Architecture
 
